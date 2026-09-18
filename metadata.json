@@ -1,0 +1,10 @@
+{
+  "name": "Attendance Scoring Manager",
+  "description": "Mobile-first Coptic Orthodox conference attendance scoring, QR scanning, temporary exit tracker, and team leaderboards.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
