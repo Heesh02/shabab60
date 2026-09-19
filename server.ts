@@ -64,12 +64,13 @@ async function startServer() {
   // QR Scan Decision Engine
   app.post('/api/scan', (req, res) => {
     try {
-      const { qr_code, performed_by } = req.body;
+      const qr_code = req.body.qr_code || req.body.code;
+      const performed_by = req.body.performed_by || req.body.scannedBy || 'Servant';
       if (!qr_code) {
         return res.status(400).json({ error: 'QR code identifier is required' });
       }
 
-      const result = ScoringService.handleScan(qr_code, performed_by || 'Servant');
+      const result = ScoringService.handleScan(qr_code, performed_by);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -277,8 +278,8 @@ async function startServer() {
         };
       });
 
-      // Rank teams by total score descending
-      enrichedTeams.sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+      // Rank teams by average_score (mean score) descending to normalize for unequal team sizes
+      enrichedTeams.sort((a, b) => (b.average_score || 0) - (a.average_score || 0) || (b.total_score || 0) - (a.total_score || 0));
       const rankedTeams = enrichedTeams.map((t, idx) => ({
         ...t,
         rank: idx + 1
@@ -677,7 +678,8 @@ async function startServer() {
         };
       });
 
-      teamScores.sort((a, b) => b.total_score - a.total_score);
+      // Sort teams by average_score (mean score) descending to normalize for unequal team sizes
+      teamScores.sort((a, b) => (b.average_score || 0) - (a.average_score || 0) || (b.total_score || 0) - (a.total_score || 0));
 
       const rankedTeams = teamScores.map((t, idx) => ({
         rank: idx + 1,

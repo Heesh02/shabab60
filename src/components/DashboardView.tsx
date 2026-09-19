@@ -11,8 +11,22 @@ import {
   ArrowRight,
   TrendingUp,
   ShieldCheck,
-  Sliders
+  Sliders,
+  BarChart3,
+  Trophy,
+  Activity
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Cell, 
+  LabelList 
+} from 'recharts';
 import { DashboardStats, Team, Attendance } from '../types';
 import { translations, Language } from '../utils/i18n';
 import { LiveTimer } from './LiveTimer';
@@ -52,6 +66,69 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const { active_event } = stats;
   const outsideAttendees = attendances.filter(a => a.status === 'TEMPORARILY_OUT');
+
+  // Sort teams by mean score (average_score) descending for fair ranking across unequal team sizes
+  const sortedTeams = [...teams].sort((a, b) => 
+    (b.average_score || 0) - (a.average_score || 0) || (b.total_score || 0) - (a.total_score || 0)
+  );
+
+  // Prepare data for the Live 4-Team Mean Score BarChart
+  const chartData = sortedTeams.map((team, idx) => {
+    const displayName = lang === 'ar' ? team.name_ar : team.name;
+    const shortName = lang === 'ar'
+      ? team.name_ar.replace('الفريق ', '').replace('الأول', '1').replace('الثاني', '2').replace('الثالث', '3').replace('الرابع', '4')
+      : team.name.replace('Team ', 'T');
+
+    return {
+      id: team.id,
+      name: shortName,
+      fullName: displayName,
+      color: team.color || '#d97706',
+      meanScore: Number((team.average_score || 0).toFixed(1)),
+      totalScore: team.total_score || 0,
+      participantCount: team.participant_count || 0,
+      rank: team.rank || idx + 1
+    };
+  });
+
+  // Custom high-contrast tooltip for Recharts
+  const CustomChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const d = payload[0].payload;
+      return (
+        <div className="bg-stone-900/95 text-white p-3.5 rounded-xl shadow-xl border border-stone-700 text-xs backdrop-blur-xs min-w-[210px] animate-in fade-in duration-150">
+          <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b border-stone-800">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: d.color }}></span>
+              <span className="font-bold text-white text-sm">{d.fullName}</span>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
+              #{d.rank}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-baseline gap-3 text-emerald-400 font-bold">
+              <span>{lang === 'ar' ? 'متوسط الدرجات (Mean):' : 'Mean Score:'}</span>
+              <span className="font-mono text-base font-black">{d.meanScore} <span className="text-[10px] text-emerald-500 font-normal">{t.points}</span></span>
+            </div>
+            <div className="flex justify-between items-center gap-3 text-stone-300">
+              <span>{lang === 'ar' ? 'المجموع الكلي للنقاط:' : 'Total Points:'}</span>
+              <span className="font-mono font-semibold text-white">{d.totalScore} {t.points}</span>
+            </div>
+            <div className="flex justify-between items-center gap-3 text-stone-300">
+              <span>{lang === 'ar' ? 'عدد الأعضاء المسجلين:' : 'Registered Members:'}</span>
+              <span className="font-mono font-semibold text-white">{d.participantCount} {lang === 'ar' ? 'مشارك' : 'youth'}</span>
+            </div>
+            <div className="pt-2 mt-1 border-t border-stone-800 text-[10px] text-stone-400 flex items-center justify-between">
+              <span>{lang === 'ar' ? 'معيار التكافؤ: المجموع ÷ الأعضاء' : 'Fair: Total ÷ Members'}</span>
+              <span className="text-amber-400 font-semibold">{t.chart_fairness_tag}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div id="dashboard-view-container" className="space-y-6">
@@ -250,67 +327,156 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
-      {/* Team Progress Overview & Recent Audit Trail */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Teams Breakdown */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-stone-200 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-stone-900 text-base flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-amber-600" />
-              {lang === 'ar' ? 'متابعة أداء الفرق' : 'Team Performance Overview'}
-            </h3>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onNavigateTab('daily-scores')}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-800 flex items-center gap-1 cursor-pointer px-2.5 py-1 bg-sky-50 rounded-lg border border-sky-200"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{lang === 'ar' ? 'المراقب اليومي' : 'Daily Monitor'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('leaderboard')}
-                className="text-xs font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
-              >
-                <span>{lang === 'ar' ? 'عرض لوحة الترتيب' : 'View Leaderboard'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+      {/* 4 TEAMS LIVE MEAN SCORE CHART (PRD: Real-time Live Mean Score Chart updating on any scan) */}
+      <div id="live-4-teams-mean-chart" className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200 shadow-xs space-y-5">
+        {/* Header with live indicator & fairness notice */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-stone-100">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                {t.chart_live_badge}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-900 border border-amber-200">
+                <Sparkles className="w-3 h-3 text-amber-600" />
+                {t.chart_fairness_tag}
+              </span>
             </div>
+            <h3 className="font-black text-stone-900 text-lg sm:text-xl flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-amber-600" />
+              <span>{t.chart_mean_score_title}</span>
+            </h3>
+            <p className="text-xs text-stone-500 mt-1 max-w-2xl leading-relaxed">
+              {t.mean_score_explanation}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {teams.map((team) => (
-              <div 
-                key={team.id}
-                className="p-3.5 rounded-xl border border-stone-200 hover:border-stone-300 bg-stone-50/50 transition flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="w-3 h-3 rounded-full shrink-0" 
-                      style={{ backgroundColor: team.color }}
-                    ></span>
-                    <span className="font-bold text-stone-800 text-sm">
-                      {lang === 'ar' ? team.name_ar : team.name}
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-stone-700">
-                    {team.total_score || 0} {t.points}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-stone-500 pt-2 border-t border-stone-200/80">
-                  <span>{team.participant_count || 0} {lang === 'ar' ? 'مشاركين' : 'members'}</span>
-                  <span>{lang === 'ar' ? 'المتوسط' : 'Avg'}: {team.average_score || 0}</span>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('daily-scores')}
+              className="text-xs font-bold text-sky-700 hover:text-sky-800 flex items-center gap-1.5 cursor-pointer px-3 py-1.5 bg-sky-50 hover:bg-sky-100 rounded-xl border border-sky-200 transition"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{lang === 'ar' ? 'المراقب اليومي' : 'Daily Monitor'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('leaderboard')}
+              className="text-xs font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1.5 cursor-pointer px-3 py-1.5 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-300 transition"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-600" />
+              <span>{lang === 'ar' ? 'عرض لوحة الترتيب' : 'Leaderboard'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* Recent Audit Actions Feed (PRD Section 38) */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex flex-col justify-between">
+        {/* Live Recharts Bar Chart */}
+        <div className="w-full h-72 sm:h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart 
+              data={chartData} 
+              margin={{ top: 25, right: 20, left: 10, bottom: 25 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="fullName" 
+                tick={{ fill: '#475569', fontSize: 12, fontWeight: 700 }}
+                axisLine={{ stroke: '#cbd5e1' }}
+                tickLine={false}
+              />
+              <YAxis 
+                tick={{ fill: '#64748b', fontSize: 11 }}
+                axisLine={{ stroke: '#cbd5e1' }}
+                tickLine={false}
+                label={{ 
+                  value: t.chart_mean_axis, 
+                  angle: -90, 
+                  position: 'insideLeft', 
+                  fill: '#64748b', 
+                  fontSize: 11,
+                  style: { textAnchor: 'middle' },
+                  offset: 0
+                }}
+              />
+              <Tooltip content={<CustomChartTooltip />} />
+              <Bar 
+                dataKey="meanScore" 
+                radius={[8, 8, 0, 0]} 
+                maxBarSize={64}
+                animationDuration={600}
+              >
+                {chartData.map((entry) => (
+                  <Cell key={`cell-${entry.id}`} fill={entry.color} />
+                ))}
+                <LabelList 
+                  dataKey="meanScore" 
+                  position="top" 
+                  formatter={(val: any) => `${val} ${t.points}`}
+                  style={{ fill: '#1e293b', fontSize: 12, fontWeight: 800, fontFamily: 'monospace' }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 4 Teams Executive Summary Cards Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-stone-100">
+          {sortedTeams.map((team, idx) => {
+            const rank = team.rank || idx + 1;
+            const meanScore = Number((team.average_score || 0).toFixed(1));
+            const memberCount = team.participant_count || 0;
+            const totalScore = team.total_score || 0;
+
+            return (
+              <div 
+                key={team.id}
+                className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/70 hover:bg-stone-50 hover:border-amber-300 transition flex flex-col justify-between shadow-2xs"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" 
+                        style={{ backgroundColor: team.color }}
+                      ></span>
+                      <h4 className="font-extrabold text-stone-900 text-sm truncate max-w-[130px]">
+                        {lang === 'ar' ? team.name_ar : team.name}
+                      </h4>
+                    </div>
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                      rank === 1 ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                      rank === 2 ? 'bg-stone-200 text-stone-800' :
+                      rank === 3 ? 'bg-orange-100 text-orange-900' :
+                      'bg-stone-100 text-stone-600'
+                    }`}>
+                      {rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
+                    </span>
+                  </div>
+
+                  <div className="my-2 bg-white p-2.5 rounded-lg border border-stone-200 text-center">
+                    <span className="text-[10px] text-emerald-800 uppercase block font-bold">
+                      {lang === 'ar' ? 'متوسط الدرجات (Mean)' : 'Mean Score'}
+                    </span>
+                    <span className="text-xl font-black text-emerald-700 font-mono block">
+                      {meanScore} <span className="text-[10px] text-stone-400 font-normal">{t.points}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-stone-500 pt-2 border-t border-stone-200/80">
+                  <span>{memberCount} {lang === 'ar' ? 'مشارك' : 'members'}</span>
+                  <span>{lang === 'ar' ? 'المجموع:' : 'Total:'} <strong className="font-mono text-stone-700">{totalScore} {t.points}</strong></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent Audit Actions Feed (PRD Section 38) */}
+      <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-stone-900 text-base flex items-center gap-2">
@@ -351,7 +517,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="font-mono text-[11px] text-amber-700 font-semibold">D365 Model V1.0</span>
           </div>
         </div>
-      </div>
     </div>
   );
 };

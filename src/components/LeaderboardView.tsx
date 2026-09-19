@@ -235,78 +235,102 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       {/* TEAM STANDINGS */}
       {tab === 'teams' && (
         <div className="space-y-4">
-          {onNavigateToTeams && (
-            <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
-              <div className="text-xs text-amber-950 font-medium">
-                {lang === 'ar' ? 'يمكنك إضافة وتعديل وحذف الفرق وعرض تفاصيل أعضائها في تبويب الفرق.' : 'Create, edit, delete teams and view member contributions in the Teams tab.'}
+          {/* Fairness info banner */}
+          <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex items-start sm:items-center justify-between gap-3 text-amber-950 text-xs shadow-2xs">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+              <div>
+                <strong className="font-bold block sm:inline">
+                  {lang === 'ar' ? 'معيار التكافؤ العادل مفعّل:' : 'Fair Scoring Active:'}
+                </strong>{' '}
+                <span>
+                  {t.mean_score_explanation}
+                </span>
               </div>
+            </div>
+            {onNavigateToTeams && (
               <button
                 type="button"
                 onClick={onNavigateToTeams}
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg cursor-pointer transition shrink-0"
               >
-                {lang === 'ar' ? 'إدارة الفرق والدرجات' : 'Manage Teams'}
+                {lang === 'ar' ? 'إدارة الفرق' : 'Teams'}
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {data.teams.map((team) => (
-            <div 
-              key={team.id}
-              className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="w-4 h-4 rounded-full" 
-                      style={{ backgroundColor: team.color }}
-                    ></span>
-                    <h3 className="font-extrabold text-stone-900 text-base">
-                      {lang === 'ar' ? team.name_ar : team.name}
-                    </h3>
+          {data.teams.map((team, idx) => {
+            const topMean = data.teams[0]?.average_score || 1;
+            const percentOfTop = topMean > 0 ? Math.round(((team.average_score || 0) / topMean) * 100) : 0;
+            const rank = team.rank || idx + 1;
+
+            return (
+              <div 
+                key={team.id}
+                className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-4 h-4 rounded-full shadow-xs" 
+                        style={{ backgroundColor: team.color }}
+                      ></span>
+                      <h3 className="font-extrabold text-stone-900 text-base">
+                        {lang === 'ar' ? team.name_ar : team.name}
+                      </h3>
+                    </div>
+                    <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
+                      rank === 1 ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                      rank === 2 ? 'bg-stone-200 text-stone-800' :
+                      rank === 3 ? 'bg-orange-100 text-orange-900' :
+                      'bg-stone-100 text-stone-700'
+                    }`}>
+                      {rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
+                    </span>
                   </div>
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                    #{team.rank}
-                  </span>
+
+                  {team.leader_name && (
+                    <p className="text-xs text-stone-500 mb-3">
+                      {lang === 'ar' ? 'الخادم القائد:' : 'Leader:'} {team.leader_name}
+                    </p>
+                  )}
+
+                  {/* Primary Mean Score Box */}
+                  <div className="my-3 bg-emerald-50/70 border border-emerald-200 p-3 rounded-xl text-center">
+                    <span className="text-[10px] text-emerald-800 uppercase block font-bold tracking-wide">
+                      {lang === 'ar' ? 'متوسط درجات الفريق (المعيار الأساسي للترتيب)' : 'Team Mean Score (Primary Standings Metric)'}
+                    </span>
+                    <span className="text-2xl font-black text-emerald-800 font-mono mt-0.5 block">
+                      {team.average_score} <span className="text-xs font-normal text-emerald-600">{t.points} / {lang === 'ar' ? 'مشارك' : 'member'}</span>
+                    </span>
+                    <div className="flex items-center justify-center gap-3 mt-1.5 pt-1.5 border-t border-emerald-200/60 text-xs text-stone-600">
+                      <span>{lang === 'ar' ? 'المشاركون:' : 'Members:'} <strong className="font-mono text-stone-900">{team.member_count}</strong></span>
+                      <span>•</span>
+                      <span>{lang === 'ar' ? 'المجموع الكلي:' : 'Total Points:'} <strong className="font-mono text-stone-900">{team.total_score} {t.points}</strong></span>
+                    </div>
+                  </div>
                 </div>
 
-                {team.leader_name && (
-                  <p className="text-xs text-stone-500 mb-4">
-                    {lang === 'ar' ? 'الخادم القائد:' : 'Leader:'} {team.leader_name}
-                  </p>
-                )}
-
-                <div className="grid grid-cols-3 gap-2 text-center my-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
-                  <div>
-                    <span className="text-[10px] text-stone-400 block uppercase font-medium">{lang === 'ar' ? 'العدد' : 'Members'}</span>
-                    <span className="font-bold text-stone-800 text-sm">{team.member_count}</span>
+                <div className="pt-2">
+                  <div className="flex justify-between text-[10px] text-stone-500 font-medium mb-1">
+                    <span>{lang === 'ar' ? 'النسبة مقارنة بالمتصدر' : 'Standing vs Leader'}</span>
+                    <span className="font-mono font-bold">{percentOfTop}%</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-stone-400 block uppercase font-medium">{lang === 'ar' ? 'المجموع' : 'Total'}</span>
-                    <span className="font-extrabold text-amber-700 text-sm">{team.total_score}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-stone-400 block uppercase font-medium">{lang === 'ar' ? 'المتوسط' : 'Avg'}</span>
-                    <span className="font-extrabold text-emerald-700 text-sm">{team.average_score}</span>
+                  <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500" 
+                      style={{ 
+                        backgroundColor: team.color, 
+                        width: `${Math.max(4, Math.min(100, percentOfTop))}%` 
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
-
-              <div className="pt-2">
-                <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-500" 
-                    style={{ 
-                      backgroundColor: team.color, 
-                      width: `${Math.min(100, (team.total_score / (data.teams[0]?.total_score || 1)) * 100)}%` 
-                    }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           </div>
         </div>
       )}

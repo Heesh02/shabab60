@@ -105,7 +105,7 @@ export function App() {
     }
   }, [isAdminAuthenticated, currentTab]);
 
-  // Handle Admin Login Success (Password: YouthConf26$)
+  // Handle Admin Login Success
   const handleAdminLoginSuccess = () => {
     setIsAdminAuthenticated(true);
     setShowAdminLoginModal(false);
@@ -214,15 +214,25 @@ export function App() {
     fetchAttendances();
   }, [selectedEventId, fetchAttendances]);
 
-  // Periodic polling every 5 seconds to keep attendance timers & stats fresh
+  // Periodic polling every 3.5 seconds to keep attendance timers, team mean scores & live chart fresh
   useEffect(() => {
     const interval = setInterval(() => {
       fetchAttendances();
       fetch('/api/stats')
-        .then(r => r.json())
-        .then(data => setStats(data))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setStats(data); })
         .catch(() => {});
-    }, 5000);
+
+      fetch('/api/teams')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setTeams(data); })
+        .catch(() => {});
+
+      fetch('/api/leaderboard')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setLeaderboardData(data); })
+        .catch(() => {});
+    }, 3500);
     return () => clearInterval(interval);
   }, [fetchAttendances]);
 
@@ -734,7 +744,7 @@ export function App() {
         }}
       />
 
-      {/* Admin Login Modal (Password: YouthConf26$) */}
+      {/* Admin Login Modal */}
       <AdminLoginModal
         isOpen={showAdminLoginModal}
         onClose={() => setShowAdminLoginModal(false)}

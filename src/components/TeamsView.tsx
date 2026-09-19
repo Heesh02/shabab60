@@ -94,13 +94,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
     );
   });
 
-  // Top team & stats calculation
+  // Top team & stats calculation (Sorted by Mean Score for fair competition across unequal team counts)
   const totalTeams = teams.length;
   const totalMembers = teams.reduce((sum, t) => sum + (t.participant_count || 0), 0);
-  const topTeam = teams.length > 0 ? [...teams].sort((a, b) => (b.total_score || 0) - (a.total_score || 0))[0] : null;
-  const maxScore = topTeam?.total_score || 1;
-  const averageTeamScore = totalTeams > 0
-    ? Math.round(teams.reduce((sum, t) => sum + (t.total_score || 0), 0) / totalTeams)
+  const topTeam = teams.length > 0 ? [...teams].sort((a, b) => (b.average_score || 0) - (a.average_score || 0))[0] : null;
+  const maxMeanScore = topTeam?.average_score || 1;
+  const averageTeamMeanScore = totalTeams > 0
+    ? Number((teams.reduce((sum, t) => sum + (t.average_score || 0), 0) / totalTeams).toFixed(1))
     : 0;
 
   // Handle Create Submit
@@ -266,12 +266,25 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] text-stone-500 block uppercase font-medium">{t.avg_score}</span>
+            <span className="text-[11px] text-stone-500 block uppercase font-medium">{t.team_avg_score}</span>
             <span className="text-xl font-black text-emerald-700 font-mono">
-              {averageTeamScore} <span className="text-[10px] text-stone-400 font-normal">{t.points}</span>
+              {averageTeamMeanScore} <span className="text-[10px] text-stone-400 font-normal">{t.points}</span>
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Fairness Scoring Callout Banner */}
+      <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>
+            <strong className="font-bold">{lang === 'ar' ? 'معيار التكافؤ العادل مفعّل:' : 'Fair Scoring Rule:'}</strong> {t.mean_score_explanation}
+          </span>
+        </div>
+        <span className="text-[10px] font-mono font-bold bg-amber-200/80 text-amber-900 px-2.5 py-1 rounded-md shrink-0 border border-amber-300">
+          {t.chart_fairness_tag}
+        </span>
       </div>
 
       {/* Search Bar */}
@@ -297,7 +310,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           const totalScore = team.total_score || 0;
           const memberCount = team.participant_count || 0;
           const avgScore = team.average_score || (memberCount > 0 ? Number((totalScore / memberCount).toFixed(1)) : 0);
-          const percentOfTop = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+          const percentOfTop = maxMeanScore > 0 ? Math.round((avgScore / maxMeanScore) * 100) : 0;
 
           return (
             <div 
@@ -377,8 +390,8 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* High Visibility Score Card */}
-                  <div className="my-4 p-3.5 rounded-xl bg-stone-50/80 border border-stone-200/80 grid grid-cols-3 gap-2 text-center">
+                  {/* High Visibility Score Card emphasizing Mean Score */}
+                  <div className="my-4 p-3 rounded-xl bg-stone-50/80 border border-stone-200/80 grid grid-cols-3 gap-2 text-center items-center">
                     <div>
                       <span className="text-[10px] text-stone-500 uppercase block font-semibold">
                         {t.team_members}
@@ -386,26 +399,32 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                       <span className="text-base font-black text-stone-800 font-mono mt-0.5 block">
                         {memberCount}
                       </span>
+                      <span className="text-[9px] text-stone-400 block">
+                        {lang === 'ar' ? 'مشارك' : 'youth'}
+                      </span>
                     </div>
 
-                    <div className="border-x border-stone-200">
-                      <span className="text-[10px] text-amber-800 uppercase block font-bold">
-                        {t.team_total_score}
+                    <div className="border-x border-emerald-200 bg-emerald-50/70 py-1.5 px-1 rounded-lg">
+                      <span className="text-[10px] text-emerald-900 uppercase block font-bold">
+                        {t.team_mean_score}
                       </span>
-                      <span className="text-xl font-black text-amber-800 font-mono mt-0.5 block tracking-tight">
-                        {totalScore}
+                      <span className="text-2xl font-black text-emerald-800 font-mono block tracking-tight">
+                        {avgScore}
                       </span>
-                      <span className="text-[9px] text-amber-700/80 block uppercase font-medium">
-                        {t.points}
+                      <span className="text-[9px] text-emerald-700 block uppercase font-medium">
+                        {t.points} / {lang === 'ar' ? 'مشارك' : 'member'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-[10px] text-emerald-800 uppercase block font-semibold">
-                        {t.team_avg_score}
+                      <span className="text-[10px] text-stone-500 uppercase block font-semibold">
+                        {t.team_total_score}
                       </span>
-                      <span className="text-base font-black text-emerald-700 font-mono mt-0.5 block">
-                        {avgScore}
+                      <span className="text-base font-black text-amber-900 font-mono mt-0.5 block">
+                        {totalScore}
+                      </span>
+                      <span className="text-[9px] text-stone-400 block font-normal">
+                        {t.points}
                       </span>
                     </div>
                   </div>

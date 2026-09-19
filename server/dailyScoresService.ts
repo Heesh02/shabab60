@@ -174,8 +174,8 @@ export class DailyScoresService {
         };
       });
 
-      // Sort teams by day total score descending
-      teamScores.sort((a, b) => b.day_total_score - a.day_total_score);
+      // Sort teams by day average/mean score descending to normalize for unequal team sizes
+      teamScores.sort((a, b) => (b.day_average_score - a.day_average_score) || (b.day_total_score - a.day_total_score));
       const rankedTeams = teamScores.map((t, tIdx) => ({
         ...t,
         rank: tIdx + 1
@@ -239,9 +239,16 @@ export class DailyScoresService {
       const teamParticipants = participants.filter(p => p.team_id === team.id);
       const pIds = new Set(teamParticipants.map(p => p.id));
       const tAtts = attendances.filter(a => pIds.has(a.participant_id));
-      const score = tAtts.reduce((sum, a) => sum + (a.final_score || 0), 0);
-      return { name: team.name, name_ar: team.name_ar, total_score: score, color: team.color };
-    }).sort((a, b) => b.total_score - a.total_score);
+      const totalScore = tAtts.reduce((sum, a) => sum + (a.final_score || 0), 0);
+      const avgScore = teamParticipants.length > 0 ? Number((totalScore / teamParticipants.length).toFixed(1)) : 0;
+      return { 
+        name: team.name, 
+        name_ar: team.name_ar, 
+        total_score: totalScore, 
+        average_score: avgScore,
+        color: team.color 
+      };
+    }).sort((a, b) => (b.average_score - a.average_score) || (b.total_score - a.total_score));
 
     return {
       conference_dates: conferenceDates,
