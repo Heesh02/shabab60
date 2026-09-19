@@ -57,17 +57,22 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
       if (res.ok && data.success) {
         onSuccess();
-      } else {
+      } else if (res.status === 401) {
         setError(data.error || t.admin_login_error);
         inputRef.current?.select();
-      }
-    } catch (err: any) {
-      // Fallback direct check if offline or network error
-      if (password.trim() === 'Conf26$') {
-        onSuccess();
       } else {
-        setError(t.admin_login_error);
+        setError(
+          lang === 'ar'
+            ? 'تعذر الاتصال بخادم التحقق. تأكد من نشر التطبيق بالكامل على Vercel ثم أعد المحاولة.'
+            : 'Could not reach the login server. Redeploy the full app on Vercel, then try again.'
+        );
       }
+    } catch {
+      setError(
+        lang === 'ar'
+          ? 'تعذر الاتصال بالخادم. تحقق من الاتصال أو أعد نشر التطبيق.'
+          : 'Server unreachable. Check your connection or redeploy the app.'
+      );
     } finally {
       setIsLoading(false);
     }

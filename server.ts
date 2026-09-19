@@ -6,9 +6,10 @@ import { ScoringService } from './server/scoring.js';
 import { DailyScoresService } from './server/dailyScoresService.js';
 import { Participant, Event, Team } from './src/types.js';
 
-async function startServer() {
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Conf26$';
+
+async function buildApp() {
   const app = express();
-  const PORT = 3000;
 
   app.use(express.json());
 
@@ -720,8 +721,7 @@ async function startServer() {
   app.post(['/api/auth/login', '/api/login'], (req, res) => {
     try {
       const { password } = req.body || {};
-      const ADMIN_PASSWORD = 'Conf26$';
-      if (password === ADMIN_PASSWORD) {
+      if ((password || '').trim() === ADMIN_PASSWORD) {
         res.json({ 
           success: true, 
           role: 'admin',
@@ -769,26 +769,35 @@ async function startServer() {
     }
   });
 
-  // ==========================================
-  // Vite Integration for SPA Development & Production
-  // ==========================================
+  // Production / Vercel: serve built SPA assets
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+  if (isProduction) {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  return app;
+}
+
+const app = await buildApp();
+export default app;
+
+if (process.env.VERCEL !== '1') {
+  const PORT = Number(process.env.PORT) || 3000;
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Attendance Scoring Manager server running on http://0.0.0.0:${PORT}`);
   });
 }
-
-startServer();
