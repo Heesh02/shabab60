@@ -63,7 +63,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
       }
     } catch (err: any) {
       // Fallback direct check if offline or network error
-      if (password.trim() === 'YouthConf26$') {
+      if (password.trim() === 'Conf26$') {
         onSuccess();
       } else {
         setError(t.admin_login_error);

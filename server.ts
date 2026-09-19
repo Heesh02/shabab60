@@ -720,7 +720,7 @@ async function startServer() {
   app.post(['/api/auth/login', '/api/login'], (req, res) => {
     try {
       const { password } = req.body || {};
-      const ADMIN_PASSWORD = 'YouthConf26$';
+      const ADMIN_PASSWORD = 'Conf26$';
       if (password === ADMIN_PASSWORD) {
         res.json({ 
           success: true, 

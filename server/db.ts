@@ -181,7 +181,11 @@ export class Database {
 
   // Events
   getEvents(): Event[] {
-    return this.data.events;
+    return [...this.data.events].sort((a, b) => {
+      const aTime = a.start_time ? new Date(a.start_time).getTime() : Number.MAX_SAFE_INTEGER;
+      const bTime = b.start_time ? new Date(b.start_time).getTime() : Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    });
   }
 
   getEventById(id: string): Event | undefined {

@@ -84,7 +84,9 @@ export class DailyScoresService {
       const labels = formatDayLabels(dateStr, idx);
       
       // Events on this date
-      const dayEvents = events.filter(e => e.start_time && e.start_time.startsWith(dateStr));
+      const dayEvents = events
+        .filter(e => e.start_time && e.start_time.startsWith(dateStr))
+        .sort((a, b) => new Date(a.start_time!).getTime() - new Date(b.start_time!).getTime());
       const dayEventIds = new Set(dayEvents.map(e => e.id));
       const dayAttendances = attendances.filter(a => dayEventIds.has(a.event_id));
 
